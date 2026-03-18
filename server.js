@@ -13,11 +13,13 @@ const app = express();
 app.use(cors({
   origin: "*"
 }));
+
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "*");
   next();
 });
+
 app.use(express.json());
 
 /* ======================
@@ -62,7 +64,7 @@ app.post("/enquiry", async (req, res) => {
 
     const { name, phone, city, message } = req.body;
 
-    // Basic validation
+    // Validation
     if (!name || !phone) {
       return res.status(400).send("Name and Phone are required");
     }
@@ -71,21 +73,27 @@ app.post("/enquiry", async (req, res) => {
     const enquiry = new Enquiry({ name, phone, city, message });
     await enquiry.save();
 
-    // Send Email
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: process.env.EMAIL_USER,
-      subject: "New Amtech Enquiry 🚀",
-      html: `
-        <h3>New Enquiry Received</h3>
-        <p><b>Name:</b> ${name}</p>
-        <p><b>Phone:</b> ${phone}</p>
-        <p><b>City:</b> ${city || "N/A"}</p>
-        <p><b>Message:</b> ${message || "N/A"}</p>
-      `
-    });
+    // Email (optional - won't break app)
+    try {
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: process.env.EMAIL_USER,
+        subject: "New Amtech Enquiry 🚀",
+        html: `
+          <h3>New Enquiry Received</h3>
+          <p><b>Name:</b> ${name}</p>
+          <p><b>Phone:</b> ${phone}</p>
+          <p><b>City:</b> ${city || "N/A"}</p>
+          <p><b>Message:</b> ${message || "N/A"}</p>
+        `
+      });
+      console.log("Email sent ✅");
+    } catch (err) {
+      console.log("Email failed ❌", err.message);
+    }
 
-    res.status(200).send("Saved & Email Sent ✅");
+    // Always success (even if email fails)
+    res.status(200).send("Enquiry submitted successfully ✅");
 
   } catch (error) {
     console.log("Error:", error);
