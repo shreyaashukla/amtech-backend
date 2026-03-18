@@ -64,36 +64,33 @@ app.post("/enquiry", async (req, res) => {
 
     const { name, phone, city, message } = req.body;
 
-    // Validation
     if (!name || !phone) {
       return res.status(400).send("Name and Phone are required");
     }
 
-    // Save to DB
     const enquiry = new Enquiry({ name, phone, city, message });
     await enquiry.save();
 
-    // Email (optional - won't break app)
-    try {
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: process.env.EMAIL_USER,
-        subject: "New Amtech Enquiry 🚀",
-        html: `
-          <h3>New Enquiry Received</h3>
-          <p><b>Name:</b> ${name}</p>
-          <p><b>Phone:</b> ${phone}</p>
-          <p><b>City:</b> ${city || "N/A"}</p>
-          <p><b>Message:</b> ${message || "N/A"}</p>
-        `
-      });
-      console.log("Email sent ✅");
-    } catch (err) {
-      console.log("Email failed ❌", err.message);
-    }
-
-    // Always success (even if email fails)
+    // 👇 SEND RESPONSE IMMEDIATELY
     res.status(200).send("Enquiry submitted successfully ✅");
+
+    // 👇 EMAIL IN BACKGROUND (no await)
+    transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: process.env.EMAIL_USER,
+      subject: "New Amtech Enquiry 🚀",
+      html: `
+        <h3>New Enquiry Received</h3>
+        <p><b>Name:</b> ${name}</p>
+        <p><b>Phone:</b> ${phone}</p>
+        <p><b>City:</b> ${city || "N/A"}</p>
+        <p><b>Message:</b> ${message || "N/A"}</p>
+      `
+    }).then(() => {
+      console.log("Email sent ✅");
+    }).catch(err => {
+      console.log("Email failed ❌", err.message);
+    });
 
   } catch (error) {
     console.log("Error:", error);
