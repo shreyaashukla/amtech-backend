@@ -5,11 +5,12 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 
+const path = require("path");
 const app = express();
 
-/* ======================
-   Middleware
-====================== */
+// Serve static files from the frontend directory
+app.use(express.static(path.join(__dirname, "../frontend")));
+
 app.use(cors({
   origin: "*"
 }));
@@ -33,12 +34,22 @@ mongoose.connect(process.env.MONGO_URI)
    Nodemailer Setup
 ====================== */
 const transporter = nodemailer.createTransport({
+  pool: true, // Use connection pooling for more reliability
   host: "smtp.gmail.com",
   port: 587,
   secure: false,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
+  }
+});
+
+// Verify connection configuration
+transporter.verify(function (error, success) {
+  if (error) {
+    console.log("Email Transporter Error ❌:", error.message);
+  } else {
+    console.log("Email Transporter Ready ✅");
   }
 });
 
@@ -69,7 +80,11 @@ app.post("/enquiry", async (req, res) => {
     }
 
     const enquiry = new Enquiry({ name, phone, city, message });
-    await enquiry.save();
+    
+    // 👇 PROCESS DB SAVE IN BACKGROUND
+    enquiry.save()
+      .then(() => console.log("Data saved to MongoDB ✅"))
+      .catch(err => console.error("MongoDB Save Error ❌", err));
 
     // 👇 SEND RESPONSE IMMEDIATELY
     res.status(200).send("Enquiry submitted successfully ✅");
@@ -89,7 +104,11 @@ app.post("/enquiry", async (req, res) => {
     }).then(() => {
       console.log("Email sent ✅");
     }).catch(err => {
-      console.log("Email failed ❌", err.message);
+      console.error("Email failed ❌ Error details:", {
+        message: err.message,
+        code: err.code,
+        command: err.command
+      });
     });
 
   } catch (error) {
